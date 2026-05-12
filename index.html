@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#6C4EBF" />
+  <title>Portal del Ratón Pérez</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bubblegum+Sans&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:  #6C4EBF;
+      --purple2: #8B6FD4;
+      --yellow:  #FFD166;
+      --pink:    #FF6B9D;
+      --teal:    #06D6A0;
+      --sky:     #74C5F5;
+      --white:   #FFFDF7;
+      --ink:     #2D1B69;
+      --page-radius: 18px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--purple);
+      font-family: 'Nunito', sans-serif;
+      touch-action: pan-y;
+    }
+
+    /* ── Stars background ─────────────────────────────────────── */
+    .stars {
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.18) 1px, transparent 1px),
+        radial-gradient(circle at 80% 10%, rgba(255,255,255,.14) 1.5px, transparent 1.5px),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.10) 1px, transparent 1px),
+        radial-gradient(circle at 10% 70%, rgba(255,255,255,.16) 2px, transparent 2px),
+        radial-gradient(circle at 90% 80%, rgba(255,255,255,.12) 1px, transparent 1px),
+        radial-gradient(circle at 35% 85%, rgba(255,255,255,.18) 1.5px, transparent 1.5px),
+        radial-gradient(circle at 65% 35%, rgba(255,255,255,.10) 1px, transparent 1px),
+        radial-gradient(circle at 75% 60%, rgba(255,255,255,.14) 2px, transparent 2px),
+        linear-gradient(135deg, #3B1F8C 0%, #6C4EBF 50%, #3B1F8C 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Book wrapper ─────────────────────────────────────────── */
+    .book-wrapper {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 1;
+      padding: 12px 16px 8px;
+    }
+
+    /* ── Page counter / dots ──────────────────────────────────── */
+    .dots {
+      display: flex; gap: 6px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.35);
+      transition: background .3s, transform .3s;
+    }
+    .dot.active {
+      background: var(--yellow);
+      transform: scale(1.4);
+    }
+
+    /* ── Viewport for pages ───────────────────────────────────── */
+    .book-viewport {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      flex: 1;
+      overflow: hidden;
+      border-radius: var(--page-radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+
+    /* ── Pages track ──────────────────────────────────────────── */
+    .pages-track {
+      display: flex;
+      height: 100%;
+      will-change: transform;
+      transition: transform .42s cubic-bezier(.45,.05,.55,.95);
+    }
+
+    /* ── Individual page ──────────────────────────────────────── */
+    .page {
+      min-width: 100%;
+      height: 100%;
+      border-radius: var(--page-radius);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* page backgrounds */
+    .page-cover  { background: linear-gradient(160deg, #2D1B69 0%, #6C4EBF 60%, #9B7FE0 100%); }
+    .page-intro  { background: linear-gradient(160deg, #1a5276 0%, #2E86C1 60%, #85C1E9 100%); }
+    .page-step1  { background: linear-gradient(160deg, #884EA0 0%, #C39BD3 70%, #FADBD8 100%); }
+    .page-step2  { background: linear-gradient(160deg, #1E8449 0%, #27AE60 60%, #A9DFBF 100%); }
+    .page-step3  { background: linear-gradient(160deg, #154360 0%, #1A5276 60%, #74C5F5 100%); }
+    .page-step4  { background: linear-gradient(160deg, #6E2F0F 0%, #CA6F1E 60%, #FAD7A0 100%); }
+    .page-step5  { background: linear-gradient(160deg, #145A32 0%, #1E8449 60%, #A9DFBF 100%); }
+
+    /* ── Page inner layout ────────────────────────────────────── */
+    .page-body {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px 20px 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Page header ──────────────────────────────────────────── */
+    .step-badge {
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: .75rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 4px;
+    }
+
+    .page-title {
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: 1.65rem;
+      line-height: 1.2;
+      color: #fff;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0,0,0,.3);
+      margin-bottom: 14px;
+    }
+
+    /* ── Illustration frame ───────────────────────────────────── */
+    .illustration {
+      width: 100%;
+      max-width: 280px;
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      overflow: visible;          /* let the outer frame show */
+      margin-bottom: 20px;
+      flex-shrink: 0;
+      position: relative;
+      /* layered shadow for depth */
+      filter: drop-shadow(0 6px 18px rgba(0,0,0,.35));
+    }
+
+    /* Outer decorative border ring */
+    .illustration::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 22px;
+      background: linear-gradient(135deg,
+        rgba(255,255,255,.75) 0%,
+        rgba(255,255,255,.25) 40%,
+        rgba(255,255,255,.60) 70%,
+        rgba(255,255,255,.75) 100%);
+      z-index: 0;
+    }
+
+    /* Inner picture area */
+    .illustration::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 22px;
+      box-shadow:
+        inset 0 2px 6px rgba(255,255,255,.6),
+        inset 0 -2px 6px rgba(0,0,0,.15);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Corner star ornaments */
+    .illustration .frame-corner {
+      position: absolute;
+      font-size: 1.1rem;
+      line-height: 1;
+      z-index: 3;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.3));
+    }
+    .illustration .frame-corner.tl { top: -10px;  left: -10px; }
+    .illustration .frame-corner.tr { top: -10px;  right: -10px; }
+    .illustration .frame-corner.bl { bottom: -10px; left: -10px; }
+    .illustration .frame-corner.br { bottom: -10px; right: -10px; }
+
+    /* The actual image/placeholder sits inside a clipped inner box */
+    .illustration .inner {
+      position: relative;
+      width: 100%; height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255,255,255,.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+
+    .illustration img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 16px;
+      display: block;
+    }
+
+    .illustration .emoji-placeholder {
+      font-size: 5rem;
+      line-height: 1;
+    }
+
+    /* ── Bubble text ──────────────────────────────────────────── */
+    .bubble {
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 2px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      padding: 14px 18px;
+      color: #fff;
+      font-size: 1rem;
+      line-height: 1.6;
+      text-align: center;
+      width: 100%;
+      max-width: 340px;
+      margin-bottom: 12px;
+    }
+
+    .bubble strong {
+      font-weight: 900;
+      font-size: 1.05rem;
+    }
+
+    /* ── Items list (intro page) ──────────────────────────────── */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 12px;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,.15);
+      border-radius: 14px;
+      padding: 10px 14px;
+      border: 1.5px solid rgba(255,255,255,.25);
+    }
+
+    .item-icon { font-size: 1.8rem; flex-shrink: 0; }
+
+    .item-text {
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    /* ── Cover elements ───────────────────────────────────────── */
+    .cover-mouse {
+      font-size: 7rem;
+      line-height: 1;
+      margin: 10px 0 6px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,.4));
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .cover-title {
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: 2.1rem;
+      color: var(--yellow);
+      text-align: center;
+      text-shadow: 0 2px 12px rgba(0,0,0,.4);
+      line-height: 1.15;
+      padding: 0 10px;
+      margin-bottom: 10px;
+    }
+
+    .cover-subtitle {
+      font-size: .95rem;
+      color: rgba(255,255,255,.8);
+      text-align: center;
+      padding: 0 24px;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .tap-hint {
+      font-size: .8rem;
+      color: rgba(255,255,255,.55);
+      text-align: center;
+      letter-spacing: .05em;
+    }
+
+    /* ── Footer navigation ────────────────────────────────────── */
+    .nav-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 420px;
+      padding: 10px 4px 0;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      background: rgba(255,255,255,.15);
+      border: 2px solid rgba(255,255,255,.3);
+      border-radius: 50px;
+      color: #fff;
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: .9rem;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-btn:active { transform: scale(.95); background: rgba(255,255,255,.25); }
+    .nav-btn:disabled { opacity: .25; pointer-events: none; }
+
+    .page-counter {
+      font-family: 'Bubblegum Sans', cursive;
+      color: rgba(255,255,255,.6);
+      font-size: .85rem;
+    }
+
+    /* ── Final page ───────────────────────────────────────────── */
+    .final-star {
+      font-size: 5rem;
+      line-height: 1;
+      margin: 8px 0;
+      animation: spin-star 4s linear infinite;
+    }
+
+    @keyframes spin-star {
+      0%   { transform: rotate(0deg) scale(1); }
+      50%  { transform: rotate(180deg) scale(1.15); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    /* ── Confetti dots on cover ───────────────────────────────── */
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .sparkle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: .7;
+      animation: twinkle 2.5s ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: .2; transform: scale(.8); }
+      50%       { opacity: .9; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<div class="book-wrapper">
+
+  <!-- Dots indicator -->
+  <div class="dots" id="dots"></div>
+
+  <!-- Book viewport -->
+  <div class="book-viewport" id="bookViewport">
+    <div class="pages-track" id="pagesTrack">
+
+      <!-- ══ PAGE 0 — COVER ══════════════════════════════════════ -->
+      <div class="page page-cover">
+        <div class="sparkles" id="sparkles"></div>
+        <div class="page-body" style="justify-content:center; gap:4px;">
+          <div class="cover-mouse">🐭</div>
+          <div class="cover-title">¡Portal del<br>Ratón Pérez!</div>
+          <div class="cover-subtitle">
+            Tu guía mágica para preparar<br>el portal y recibir tu sorpresa ✨
+          </div>
+          <div class="tap-hint">👉 Deslizá para empezar</div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 1 — INTRO / QUÉ ES ════════════════════════════ -->
+      <div class="page page-intro">
+        <div class="page-body">
+          <div class="step-badge">¡Empecemos!</div>
+          <div class="page-title">¿Qué es el Portal<br>del Ratón Pérez?</div>
+          <div class="illustration">
+            <span class="frame-corner tl">🌟</span>
+            <span class="frame-corner tr">🌟</span>
+            <span class="frame-corner bl">🌟</span>
+            <span class="frame-corner br">🌟</span>
+            <div class="inner">
+              <img src="images/intro.png" alt="El Ratón Pérez explicado"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🐭🏠</div>
+            </div>
+          </div>
+          <div class="bubble">
+            El Ratón Pérez viene de noche 🌙 y necesita una <strong>puertita especial</strong> para entrar a tu cuarto, llevarse tu diente y dejarte una <strong>sorpresita</strong>! 🎁
+          </div>
+          <div class="bubble" style="font-size:.9rem;">
+            ¡Vos vas a armar su portal! Para eso vas a necesitar las 3 cositas de tu cajita:
+          </div>
+          <div class="items-list">
+            <div class="item-row">
+              <div class="item-icon">🚪</div>
+              <div class="item-text">La puertita de madera</div>
+            </div>
+            <div class="item-row">
+              <div class="item-icon">🏠</div>
+              <div class="item-text">La base blanca (con el código QR)</div>
+            </div>
+            <div class="item-row">
+              <div class="item-icon">🦷</div>
+              <div class="item-text">El recipiente con forma de diente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 2 — PASO 1: DECORAR ═══════════════════════════ -->
+      <div class="page page-step1">
+        <div class="page-body">
+          <div class="step-badge">Paso 1 de 4</div>
+          <div class="page-title">¡Decorá tu puerta! 🎨</div>
+          <div class="illustration">
+            <span class="frame-corner tl">🎨</span>
+            <span class="frame-corner tr">🎨</span>
+            <span class="frame-corner bl">🎨</span>
+            <span class="frame-corner br">🎨</span>
+            <div class="inner">
+              <img src="images/paso1.png" alt="Decorando la puerta"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🎨🚪</div>
+            </div>
+          </div>
+          <div class="bubble">
+            Agarrá la <strong>puertita de madera</strong> y decorala como más te guste! 🌈
+          </div>
+          <div class="bubble">
+            Podés usar:<br>
+            🖍️ Lápices de colores<br>
+            🖊️ Marcadores<br>
+            🖌️ Pinturas<br>
+            ✨ ¡Lo que quieras!
+          </div>
+          <div class="bubble" style="font-size:.9rem; opacity:.85;">
+            ¡Hacela bien bonita para que el Ratón Pérez sepa que es <strong>tu</strong> portal! 🐭❤️
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 3 — PASO 2: ARMAR LA BASE ═════════════════════ -->
+      <div class="page page-step2">
+        <div class="page-body">
+          <div class="step-badge">Paso 2 de 4</div>
+          <div class="page-title">¡Armá el portal! 🏠</div>
+          <div class="illustration">
+            <span class="frame-corner tl">🏠</span>
+            <span class="frame-corner tr">🏠</span>
+            <span class="frame-corner bl">🏠</span>
+            <span class="frame-corner br">🏠</span>
+            <div class="inner">
+              <img src="images/paso2.png" alt="Armando la base"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🏠🔧</div>
+            </div>
+          </div>
+          <div class="bubble">
+            Una vez que tu puerta esté seca, <strong>pegala en la base blanca</strong> en el lugar de la puertita.
+          </div>
+          <div class="bubble">
+            Dejá el <strong>recipiente de diente</strong> 🦷 abierto al lado de la puerta. ¡Así el Ratón Pérez sabe dónde buscar!
+          </div>
+          <div class="bubble" style="font-size:.9rem; opacity:.85;">
+            Podés pedirle ayuda a mamá o papá para pegar la puerta. 😊
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 4 — PASO 3: DIENTE LISTO ══════════════════════ -->
+      <div class="page page-step3">
+        <div class="page-body">
+          <div class="step-badge">Cuando se te caiga un diente</div>
+          <div class="page-title">¡Se te cayó<br>un diente! 🦷</div>
+          <div class="illustration">
+            <span class="frame-corner tl">🦷</span>
+            <span class="frame-corner tr">🦷</span>
+            <span class="frame-corner bl">🦷</span>
+            <span class="frame-corner br">🦷</span>
+            <div class="inner">
+              <img src="images/paso3.png" alt="Colocando el diente"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🦷😁</div>
+            </div>
+          </div>
+          <div class="bubble">
+            ¡Qué emocionante! Ahora agarrá el recipientito blanco con forma de diente y <strong>adentro poné tu diente</strong>. 🦷✨
+          </div>
+          <div class="bubble">
+            No te olvides: ¡es <strong>tu diente</strong>, bien guardadito, listo para el Ratón Pérez! 🐭
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 5 — PASO 4: CERRAR Y ESPERAR ══════════════════ -->
+      <div class="page page-step4">
+        <div class="page-body">
+          <div class="step-badge">Paso 3 de 4</div>
+          <div class="page-title">¡A dormir se ha dicho! 🌙</div>
+          <div class="illustration">
+            <span class="frame-corner tl">🌙</span>
+            <span class="frame-corner tr">🌙</span>
+            <span class="frame-corner bl">🌙</span>
+            <span class="frame-corner br">🌙</span>
+            <div class="inner">
+              <img src="images/paso4.png" alt="Colocando en la mesa de luz"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🛏️🌙</div>
+            </div>
+          </div>
+          <div class="bubble">
+            <strong>Cerrá</strong> el recipiente de diente y ponelo en la base, frente a la puerta del portal. 🚪
+          </div>
+          <div class="bubble">
+            Dejá todo en tu <strong>mesa de luz</strong> 🕯️ antes de irte a dormir.
+          </div>
+          <div class="bubble" style="font-size:.9rem; opacity:.85;">
+            ¡El Ratón Pérez solamente viene cuando estás dormido! 😴 No hagas trampa... 🐭👀
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE 6 — PASO 5: MAÑANA ════════════════════════════ -->
+      <div class="page page-step5">
+        <div class="page-body" style="justify-content:center; gap:6px;">
+          <div class="step-badge">Paso 4 de 4</div>
+          <div class="page-title">¡Por la mañana,<br>a revisar! 🌅</div>
+          <div class="final-star">⭐</div>
+          <div class="illustration" style="max-width:220px;">
+            <span class="frame-corner tl">⭐</span>
+            <span class="frame-corner tr">⭐</span>
+            <span class="frame-corner bl">⭐</span>
+            <span class="frame-corner br">⭐</span>
+            <div class="inner">
+              <img src="images/paso5.png" alt="La sorpresa del Ratón Pérez"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="emoji-placeholder" style="display:none;">🎁✨</div>
+            </div>
+          </div>
+          <div class="bubble">
+            ¡Cuando te levantés, corré a ver tu portal! 🏃‍♀️💨
+          </div>
+          <div class="bubble">
+            El Ratón Pérez habrá pasado durante la noche y te dejó una <strong>sorpresita especial</strong> 🎁 a cambio de tu diente. ¡Felicitaciones! 🎉
+          </div>
+          <div class="bubble" style="font-size:.9rem; opacity:.85;">
+            🐭💬 <em>"¡Gracias por cuidar tus dientes!"</em>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pages-track -->
+  </div><!-- /book-viewport -->
+
+  <!-- Navigation footer -->
+  <div class="nav-footer">
+    <button class="nav-btn" id="btnPrev" disabled>← Atrás</button>
+    <span class="page-counter" id="pageCounter">1 / 7</span>
+    <button class="nav-btn" id="btnNext">Siguiente →</button>
+  </div>
+
+</div><!-- /book-wrapper -->
+
+<script>
+  (function () {
+    var totalPages = 7;
+    var current = 0;
+    var track = document.getElementById('pagesTrack');
+    var btnPrev = document.getElementById('btnPrev');
+    var btnNext = document.getElementById('btnNext');
+    var counter = document.getElementById('pageCounter');
+    var dotsEl  = document.getElementById('dots');
+
+    // Build dots
+    for (var i = 0; i < totalPages; i++) {
+      var d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      dotsEl.appendChild(d);
+    }
+
+    // Sparkles on cover
+    var sparklesEl = document.getElementById('sparkles');
+    var colors = ['#FFD166','#FF6B9D','#74C5F5','#06D6A0','#fff'];
+    for (var s = 0; s < 20; s++) {
+      var sp = document.createElement('div');
+      sp.className = 'sparkle';
+      var size = 4 + Math.random() * 8;
+      sp.style.cssText = [
+        'width:' + size + 'px',
+        'height:' + size + 'px',
+        'left:' + Math.random() * 100 + '%',
+        'top:' + Math.random() * 100 + '%',
+        'background:' + colors[Math.floor(Math.random() * colors.length)],
+        'animation-delay:' + (Math.random() * 2.5) + 's',
+        'animation-duration:' + (1.5 + Math.random() * 2) + 's'
+      ].join(';');
+      sparklesEl.appendChild(sp);
+    }
+
+    function goTo(idx) {
+      current = Math.max(0, Math.min(totalPages - 1, idx));
+      track.style.transform = 'translateX(-' + (current * 100) + '%)';
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === totalPages - 1;
+      counter.textContent = (current + 1) + ' / ' + totalPages;
+      var dotNodes = dotsEl.children;
+      for (var i = 0; i < dotNodes.length; i++) {
+        dotNodes[i].className = 'dot' + (i === current ? ' active' : '');
+      }
+    }
+
+    btnPrev.addEventListener('click', function () { goTo(current - 1); });
+    btnNext.addEventListener('click', function () { goTo(current + 1); });
+
+    // Touch / swipe support
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var viewport = document.getElementById('bookViewport');
+
+    viewport.addEventListener('touchstart', function (e) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      var dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        if (dx < 0) goTo(current + 1);
+        else        goTo(current - 1);
+      }
+    }, { passive: true });
+
+    // Keyboard support
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  goTo(current + 1);
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    goTo(current - 1);
+    });
+
+    goTo(0);
+  })();
+</script>
+</body>
+</html>
